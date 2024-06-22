@@ -51,7 +51,7 @@ const AddHabit = () => {
           <View style={styles.colorContainer}>
             {colorArray.map((color, index) => (
               <TouchableOpacity
-                key={color} // Key prop for each View
+                key={color}
                 style={[
                   styles.colorView,
                   {
