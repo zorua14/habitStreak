@@ -3,103 +3,175 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Button,
   ScrollView,
+  FlatList,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Entypo } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { Calendar, CalendarList } from "react-native-calendars";
-import RNPickerSelect from "react-native-picker-select";
+import * as Haptics from "expo-haptics";
+import {
+  Menu,
+  MenuOptions,
+  MenuOption,
+  MenuTrigger,
+} from "react-native-popup-menu";
+import { SimpleLineIcons } from "@expo/vector-icons";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  deleteHabit,
+  addDateToHabit,
+  removeDateFromHabit,
+} from "../redux/habitSlice";
+
 const Home = () => {
   const navigation = useNavigation();
   const [showMonth, setShowMonth] = useState(false);
+  const dispatch = useDispatch();
+  const habits = useSelector((state) => state.habits);
+  useEffect(() => {
+    console.log(habits);
+  }, [habits]);
+  // MARK: - TOGGLE DATE
+  const toggleDate = (habitId, dateString) => {
+    const habit = habits.find((habit) => habit.id === habitId);
+    if (!habit) return;
 
-  // Dummy data
-
-  const dummyHabits = [
-    {
-      id: "1",
-      name: "Exercise",
-      dates: ["2024-06-01", "2024-06-03", "2024-06-05"],
-    },
-    { id: "2", name: "Read", dates: ["2024-06-22", "2024-06-04"] },
-  ];
-
-  const [selectedHabitId, setSelectedHabitId] = useState(dummyHabits[0].id);
-
-  const selectedHabit = dummyHabits.find(
-    (habit) => habit.id === selectedHabitId
-  );
-  const markedDates = {};
-  selectedHabit.dates.forEach((date) => {
-    markedDates[date] = { marked: true, dotColor: "green" };
-  });
-
-  const toggleDate = (day) => {
-    const dateIndex = selectedHabit.dates.indexOf(day.dateString);
-    if (dateIndex > -1) {
-      selectedHabit.dates.splice(dateIndex, 1);
+    if (habit.completedDates.includes(dateString)) {
+      dispatch(removeDateFromHabit({ id: habitId, date: dateString }));
     } else {
-      selectedHabit.dates.push(day.dateString);
+      dispatch(addDateToHabit({ id: habitId, date: dateString }));
     }
   };
+  // MARK: - GET WEEK DATES
   const getWeekDates = () => {
     const today = new Date();
-    const firstDayOfWeek = new Date(
-      today.setDate(today.getDate() - today.getDay() + 1)
-    );
-    const weekDates = Array.from({ length: 7 }).map((_, i) => {
-      const date = new Date(firstDayOfWeek);
-      date.setDate(firstDayOfWeek.getDate() + i);
+    const weekDates = Array.from({ length: 5 }).map((_, i) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
       return date.toISOString().split("T")[0];
     });
+
     return weekDates;
   };
-  const renderWeekView = () => {
+  // MARK: - WEEK VIEW
+  const renderWeekView = ({ item }) => {
     const weekDates = getWeekDates();
+    const markedDates = item.completedDates.reduce((acc, date) => {
+      acc[date] = true;
+      return acc;
+    }, {});
+
     return (
-      <ScrollView horizontal contentContainerStyle={styles.weekContainer}>
-        {weekDates.map((date) => (
-          <View key={date} style={styles.dayContainer}>
-            <Text>
-              {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
-            </Text>
-            <Text>{new Date(date).getDate()}</Text>
-            <View
-              style={[
-                styles.dateCircle,
-                markedDates[date] && { backgroundColor: "green" },
-              ]}
-            />
-          </View>
-        ))}
-      </ScrollView>
+      <View
+        style={{
+          backgroundColor: item.primaryColor,
+          padding: 15,
+          margin: 8,
+          borderRadius: 15,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 25,
+              color: "black",
+              marginLeft: 15,
+              marginVertical: 5,
+            }}
+          >
+            {item.name}
+          </Text>
+
+          <Menu
+            style={{
+              marginRight: "6%",
+              width: 25,
+            }}
+          >
+            <MenuTrigger>
+              <SimpleLineIcons name="options" size={24} color="black" />
+            </MenuTrigger>
+            <MenuOptions>
+              <MenuOption onSelect={() => {}}>
+                <Text style={{ padding: 10 }}>Analytics</Text>
+              </MenuOption>
+              <MenuOption
+                onSelect={() => {
+                  dispatch(deleteHabit(item.id));
+                }}
+              >
+                <Text style={{ padding: 10 }}>Delete Habit</Text>
+              </MenuOption>
+            </MenuOptions>
+          </Menu>
+        </View>
+        <ScrollView horizontal contentContainerStyle={styles.weekContainer}>
+          {weekDates.map((date) => (
+            <View key={date} style={styles.dayContainer}>
+              <Text>
+                {new Date(date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                })}
+              </Text>
+              <Text>{new Date(date).getDate()}</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Success
+                  );
+                  toggleDate(item.id, date);
+                }}
+              >
+                <View
+                  style={[
+                    styles.dateCircle,
+
+                    markedDates[date] && {
+                      backgroundColor: item.secondaryColor,
+                    },
+                    {
+                      borderColor:
+                        date === new Date().toISOString().split("T")[0]
+                          ? "white"
+                          : "black",
+                    },
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
     );
   };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
-        <Text>Select a habit:</Text>
-        <RNPickerSelect
-          onValueChange={(value) => setSelectedHabitId(value)}
-          items={dummyHabits.map((habit) => ({
-            label: habit.name,
-            value: habit.id,
-          }))}
-          value={selectedHabitId}
-          style={pickerSelectStyles}
+        <Text
+          style={{
+            fontSize: 25,
+            fontWeight: "600",
+            marginLeft: 16,
+            marginVertical: 5,
+            textAlign: "center",
+          }}
+        >
+          Your Streak!
+        </Text>
+        <FlatList
+          data={habits}
+          renderItem={renderWeekView}
+          keyExtractor={(item) => item.id}
         />
-        <Button
-          title={`Show ${showMonth ? "Week" : "Month"}`}
-          onPress={() => setShowMonth(!showMonth)}
-        />
-        {showMonth ? (
-          <Calendar markedDates={markedDates} onDayPress={toggleDate} />
-        ) : (
-          renderWeekView()
-        )}
         <TouchableOpacity
           style={styles.fab}
           onPress={() => {
@@ -148,11 +220,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   dateCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: "gray",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
     marginTop: 5,
   },
 });

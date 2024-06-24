@@ -1,4 +1,5 @@
 import {
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +11,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Entypo } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSelector, useDispatch } from "react-redux";
+import { addHabit } from "../redux/habitSlice";
 
 const AddHabit = () => {
   const navigation = useNavigation();
@@ -17,18 +20,33 @@ const AddHabit = () => {
   const [color, setColor] = useState("#98F5F9");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const colorArray = [
-    "#98F5F9",
-    "#8BFF5D",
-    "#EAAA6A",
-    "#EFC3CA",
-    "#060270",
-    "#FFECA1",
+    ["#98F5F9", "#2273FF"],
+    ["#8BFF5D", "#0DF349"],
+    ["#EAAA6A", "#F37A02"],
+    ["#EFC3CA", "#FF6F86"],
+    ["#7671FF", "#060270"],
+    ["#FFECA1", "#FACB11"],
   ];
+  const dispatch = useDispatch();
   const handleAddHabit = () => {
     if (habitName.trim()) {
       //   dispatch(addHabit({ id: Date.now().toString(), name: habitName }));
-      //   setHabitName('');
+      setHabitName("");
+      console.log(colorArray[selectedIndex]);
+      console.log(habitName);
+      console.log(Date.now().toString());
+
+      dispatch(
+        addHabit({
+          id: Date.now().toString(),
+          name: habitName,
+          primaryColor: colorArray[selectedIndex][0],
+          secondaryColor: colorArray[selectedIndex][1],
+        })
+      );
       navigation.goBack();
+    } else {
+      Alert.alert("Name is required", "Please enter a name");
     }
   };
   return (
@@ -51,18 +69,18 @@ const AddHabit = () => {
           <View style={styles.colorContainer}>
             {colorArray.map((color, index) => (
               <TouchableOpacity
-                key={color}
+                key={color[0]}
                 style={[
                   styles.colorView,
                   {
-                    backgroundColor: color,
+                    backgroundColor: color[0],
                     borderWidth: index === selectedIndex ? 3 : 1,
                     borderColor:
                       index === selectedIndex ? "black" : "transparent",
                   },
                 ]}
                 onPress={() => {
-                  setColor(colorArray[index]);
+                  setColor(color[0]);
                   setSelectedIndex(index);
                 }}
               ></TouchableOpacity>
