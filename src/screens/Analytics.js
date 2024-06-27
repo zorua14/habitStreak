@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Calendar } from "react-native-calendars";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector, useDispatch } from "react-redux";
@@ -10,8 +10,12 @@ import {
 } from "../redux/habitSlice";
 import { differenceInDays, parseISO } from "date-fns";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
+import { useTheme } from "react-native-paper";
+import { StatusBar } from "expo-status-bar";
 
 const Analytics = ({ navigation, route }) => {
+  const { colors, dark } = useTheme();
+  const [themeChanged, setThemeChanged] = useState(false);
   const { id } = route.params;
   const habit = useSelector((state) => selectHabitById(state, id));
   const dispatch = useDispatch();
@@ -26,6 +30,9 @@ const Analytics = ({ navigation, route }) => {
     });
     return markedDates;
   };
+  useEffect(() => {
+    setThemeChanged((prev) => !prev); // Trigger re-render when theme changes
+  }, [colors]);
   const currentDate = new Date().toISOString().split("T")[0];
   const markedDates = transformDates(
     habit.completedDates,
@@ -94,94 +101,134 @@ const Analytics = ({ navigation, route }) => {
   };
   //MARK: - VIEW
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.container}>
-        <Calendar
-          onDayPress={(day) => {
-            //day.dateString
-            toggleDate(id, day.dateString);
-          }}
-          current={new Date().toISOString().split("T")[0]}
-          maxDate={new Date().toISOString().split("T")[0]}
-          hideArrows={false}
-          hideExtraDays={true}
-          disableMonthChange={false}
-          enableSwipeMonths={true}
-          onPressArrowLeft={(subtractMonth) => subtractMonth()}
-          onPressArrowRight={(addMonth) => addMonth()}
-          disableArrowLeft={false}
-          disableArrowRight={false}
-          disableAllTouchEventsForDisabledDays={true}
-          markedDates={markedDates}
-        />
-        <Text
-          style={{
-            alignSelf: "center",
-            fontWeight: "bold",
-            fontSize: 28,
-            marginTop: 15,
-          }}
-        >
-          {habit.name}
-        </Text>
+    <>
+      <StatusBar
+        barStyle={dark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background}
+      />
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
         <View
-          style={{
-            flexDirection: "row",
-            margin: 10,
-            height: 80,
-          }}
+          style={[styles.container, { backgroundColor: colors.background }]}
         >
-          <View
+          <Calendar
+            onDayPress={(day) => {
+              //day.dateString
+              toggleDate(id, day.dateString);
+            }}
             style={{
-              backgroundColor: habit.secondaryColor,
-              borderRadius: 10,
-              flex: 1,
-              justifyContent: "center",
-              marginRight: 10,
+              borderRadius: 5,
+              margin: 12,
+              elevation: 5,
+              borderWidth: 4,
+              borderColor: colors.title,
+            }}
+            theme={{
+              calendarBackground: colors.background,
+              dayTextColor: colors.title,
+              monthTextColor: "#32C2FF",
+              textDisabledColor: "gray",
+            }}
+            key={themeChanged}
+            current={new Date().toISOString().split("T")[0]}
+            maxDate={new Date().toISOString().split("T")[0]}
+            hideArrows={false}
+            hideExtraDays={true}
+            disableMonthChange={false}
+            enableSwipeMonths={true}
+            onPressArrowLeft={(subtractMonth) => subtractMonth()}
+            onPressArrowRight={(addMonth) => addMonth()}
+            disableArrowLeft={false}
+            disableArrowRight={false}
+            disableAllTouchEventsForDisabledDays={true}
+            markedDates={markedDates}
+          />
+          <Text
+            style={{
+              alignSelf: "center",
+              fontWeight: "bold",
+              fontSize: 28,
+              marginTop: 15,
+              color: colors.title,
             }}
           >
-            <Text style={styles.titleStyle}>Maximum Streak</Text>
-            <Text style={styles.titleStyle}>{maxStreak}</Text>
-          </View>
+            {habit.name}
+          </Text>
           <View
             style={{
-              backgroundColor: habit.secondaryColor,
-              borderRadius: 10,
-              flex: 1,
-              justifyContent: "center",
+              flexDirection: "row",
+              margin: 10,
+              height: 80,
             }}
           >
-            <Text style={styles.titleStyle}>Current Streak</Text>
-            <Text style={styles.titleStyle}>{currentStreak}</Text>
+            <View
+              style={{
+                backgroundColor: habit.secondaryColor,
+                borderRadius: 10,
+                flex: 1,
+                justifyContent: "center",
+                marginRight: 10,
+              }}
+            >
+              <Text style={styles.titleStyle}>Maximum Streak</Text>
+              <Text style={styles.titleStyle}>{maxStreak}</Text>
+            </View>
+            <View
+              style={{
+                backgroundColor: habit.secondaryColor,
+                borderRadius: 10,
+                flex: 1,
+                justifyContent: "center",
+              }}
+            >
+              <Text style={styles.titleStyle}>Current Streak</Text>
+              <Text style={styles.titleStyle}>{currentStreak}</Text>
+            </View>
           </View>
-        </View>
 
-        <AnimatedCircularProgress
-          size={120}
-          width={15}
-          duration={1000}
-          fill={completionPercentage ? completionPercentage : 0}
-          tintColor={habit.secondaryColor}
-          backgroundColor="#d3d3d3"
-          rotation={0}
-          lineCap="round"
-          style={{ alignSelf: "center", marginTop: 20 }}
-        >
-          {(fill) => (
-            <Text style={{ fontSize: 24, fontWeight: "bold" }}>
-              {Math.round(completionPercentage ? completionPercentage : 0)}%
-            </Text>
-          )}
-        </AnimatedCircularProgress>
-        <Text style={{ alignSelf: "center", fontSize: 24 }}>
-          Completion Rate
-        </Text>
-        <Text style={{ alignSelf: "center", fontSize: 20, marginTop: 20 }}>
-          {" "}
-          Total Days Perfromed: {habit.completedDates.length}
-        </Text>
-      </View>
-    </SafeAreaView>
+          <AnimatedCircularProgress
+            size={120}
+            width={15}
+            duration={1000}
+            fill={completionPercentage ? completionPercentage : 0}
+            tintColor={habit.secondaryColor}
+            backgroundColor="#d3d3d3"
+            rotation={0}
+            lineCap="round"
+            style={{ alignSelf: "center", marginTop: 20 }}
+          >
+            {(fill) => (
+              <Text
+                style={{
+                  fontSize: 24,
+                  fontWeight: "bold",
+                  color: colors.title,
+                }}
+              >
+                {Math.round(completionPercentage ? completionPercentage : 0)}%
+              </Text>
+            )}
+          </AnimatedCircularProgress>
+          <Text
+            style={{ alignSelf: "center", fontSize: 24, color: colors.title }}
+          >
+            Completion Rate
+          </Text>
+          <Text
+            style={{
+              alignSelf: "center",
+              fontSize: 20,
+              marginTop: 20,
+              color: colors.title,
+            }}
+          >
+            {" "}
+            Total Days Perfromed {habit.completedDates.length}
+          </Text>
+        </View>
+      </SafeAreaView>
+    </>
   );
 };
 

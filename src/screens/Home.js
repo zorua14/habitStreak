@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Entypo } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
-import { Snackbar } from "react-native-paper";
+import { Snackbar, useTheme } from "react-native-paper";
 import {
   Menu,
   MenuOptions,
@@ -28,6 +28,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 
 const Home = () => {
+  const { colors, dark } = useTheme();
   const navigation = useNavigation();
   const [showMonth, setShowMonth] = useState(false);
   const dispatch = useDispatch();
@@ -170,38 +171,52 @@ const Home = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <View style={styles.container}>
-        <Text
-          style={{
-            fontSize: 25,
-            fontWeight: "600",
-            marginLeft: 16,
-            marginVertical: 5,
-            textAlign: "center",
-          }}
+    <>
+      <StatusBar
+        barStyle={dark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background}
+      />
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
+        <View
+          style={[styles.container, { backgroundColor: colors.background }]}
         >
-          Your Streak!
-        </Text>
-        <FlatList
-          data={habits}
-          renderItem={renderWeekView}
-          keyExtractor={(item) => item.id}
-        />
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => {
-            navigation.navigate("AddHabit");
-          }}
+          <Text
+            style={{
+              fontSize: 25,
+              fontWeight: "600",
+              marginLeft: 16,
+              marginVertical: 5,
+              textAlign: "center",
+              color: colors.title,
+            }}
+          >
+            Your Streak!
+          </Text>
+          <FlatList
+            data={habits}
+            renderItem={renderWeekView}
+            keyExtractor={(item) => item.id}
+          />
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => {
+              navigation.navigate("AddHabit");
+            }}
+          >
+            <Entypo name="plus" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+        <Snackbar
+          visible={visible}
+          onDismiss={onDismissSnackBar}
+          duration={1200}
         >
-          <Entypo name="plus" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-      <Snackbar visible={visible} onDismiss={onDismissSnackBar} duration={1200}>
-        Habit has been deleted
-      </Snackbar>
-    </SafeAreaView>
+          Habit has been deleted
+        </Snackbar>
+      </SafeAreaView>
+    </>
   );
 };
 
@@ -210,7 +225,6 @@ export default Home;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   fab: {
     position: "absolute",

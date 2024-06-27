@@ -8,14 +8,16 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Entypo } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSelector, useDispatch } from "react-redux";
 import { addHabit } from "../redux/habitSlice";
+import { useTheme } from "react-native-paper";
+import { StatusBar } from "expo-status-bar";
 
 const AddHabit = () => {
   const navigation = useNavigation();
+  const { colors, dark } = useTheme();
   const [habitName, setHabitName] = useState("");
   const [color, setColor] = useState("#98F5F9");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -47,48 +49,57 @@ const AddHabit = () => {
     }
   };
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        style={styles.container}
-        colors={["#fff", color]}
-        start={[0.5, 0.5]}
-        end={[1, 1]}
-      >
-        <View style={styles.innerContainer}>
-          <Text style={styles.headerText}>Add Habit</Text>
-          <TextInput
-            style={styles.input}
-            value={habitName}
-            onChangeText={setHabitName}
-            placeholder="Enter habit"
-            placeholderTextColor="#888"
-          />
-          <View style={styles.colorContainer}>
-            {colorArray.map((color, index) => (
-              <TouchableOpacity
-                key={color[0]}
-                style={[
-                  styles.colorView,
-                  {
-                    backgroundColor: color[0],
-                    borderWidth: index === selectedIndex ? 3 : 1,
-                    borderColor:
-                      index === selectedIndex ? "black" : "transparent",
-                  },
-                ]}
-                onPress={() => {
-                  setColor(color[0]);
-                  setSelectedIndex(index);
-                }}
-              ></TouchableOpacity>
-            ))}
+    <>
+      <StatusBar
+        barStyle={dark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background}
+      />
+      <SafeAreaView style={styles.container}>
+        <LinearGradient
+          style={styles.container}
+          colors={[colors.background, color]}
+          start={[0.5, 0.5]}
+          end={[1, 1]}
+        >
+          <View style={styles.innerContainer}>
+            <Text style={[styles.headerText, { color: colors.title }]}>
+              Add Habit
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={habitName}
+              onChangeText={setHabitName}
+              placeholder="Enter habit"
+              placeholderTextColor="#888"
+              color={colors.title}
+            />
+            <View style={styles.colorContainer}>
+              {colorArray.map((color, index) => (
+                <TouchableOpacity
+                  key={color[0]}
+                  style={[
+                    styles.colorView,
+                    {
+                      backgroundColor: color[0],
+                      borderWidth: index === selectedIndex ? 3 : 1,
+                      borderColor:
+                        index === selectedIndex ? colors.title : "transparent",
+                    },
+                  ]}
+                  onPress={() => {
+                    setColor(color[0]);
+                    setSelectedIndex(index);
+                  }}
+                ></TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.addButton} onPress={handleAddHabit}>
+              <Text style={styles.addButtonText}>Done</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={handleAddHabit}>
-            <Text style={styles.addButtonText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    </SafeAreaView>
+        </LinearGradient>
+      </SafeAreaView>
+    </>
   );
 };
 
@@ -97,7 +108,6 @@ export default AddHabit;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   innerContainer: {
     flex: 1,
@@ -109,7 +119,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
-    color: "#333",
   },
   input: {
     height: 40,
