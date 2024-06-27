@@ -9,6 +9,7 @@ import {
   selectHabitById,
 } from "../redux/habitSlice";
 import { differenceInDays, parseISO } from "date-fns";
+import { AnimatedCircularProgress } from "react-native-circular-progress";
 
 const Analytics = ({ navigation, route }) => {
   const { id } = route.params;
@@ -26,13 +27,17 @@ const Analytics = ({ navigation, route }) => {
     return markedDates;
   };
   const currentDate = new Date().toISOString().split("T")[0];
-  const markedDates = transformDates(habit.completedDates, habit.primaryColor);
+  const markedDates = transformDates(
+    habit.completedDates,
+    habit.secondaryColor
+  );
   if (markedDates[currentDate]) {
     markedDates[currentDate].selected = true;
     markedDates[currentDate].marked = true;
   } else {
     markedDates[currentDate] = { marked: true };
   }
+  // MARK: - STREAK CALC
   const calculateStreaks = (completedDates) => {
     if (completedDates.length === 0) {
       return { currentStreak: 0, maxStreak: 0 };
@@ -61,6 +66,11 @@ const Analytics = ({ navigation, route }) => {
     const today = new Date();
     const lastCompletedDate = sortedDates[sortedDates.length - 1];
     const daysSinceLastCompleted = differenceInDays(today, lastCompletedDate);
+    const daysBetweenTodayAndStart =
+      differenceInDays(today, sortedDates[0]) + 1; // Include both start and end dates
+    const completionPercentage = Math.round(
+      (sortedDates.length / daysBetweenTodayAndStart) * 100
+    );
 
     // If today is not completed, the streak breaks
     if (daysSinceLastCompleted > 0) {
@@ -69,9 +79,12 @@ const Analytics = ({ navigation, route }) => {
       currentStreak = tempStreak;
     }
 
-    return { currentStreak, maxStreak };
+    return { currentStreak, maxStreak, completionPercentage };
   };
-  const { currentStreak, maxStreak } = calculateStreaks(habit.completedDates);
+  const { currentStreak, maxStreak, completionPercentage } = calculateStreaks(
+    habit.completedDates
+  );
+  //MARK: - TOGGLE DATE
   const toggleDate = (habitId, dateString) => {
     if (habit.completedDates.includes(dateString)) {
       dispatch(removeDateFromHabit({ id: habitId, date: dateString }));
@@ -79,7 +92,7 @@ const Analytics = ({ navigation, route }) => {
       dispatch(addDateToHabit({ id: habitId, date: dateString }));
     }
   };
-
+  //MARK: - VIEW
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
@@ -89,6 +102,7 @@ const Analytics = ({ navigation, route }) => {
             toggleDate(id, day.dateString);
           }}
           current={new Date().toISOString().split("T")[0]}
+          maxDate={new Date().toISOString().split("T")[0]}
           hideArrows={false}
           hideExtraDays={true}
           disableMonthChange={false}
@@ -100,19 +114,72 @@ const Analytics = ({ navigation, route }) => {
           disableAllTouchEventsForDisabledDays={true}
           markedDates={markedDates}
         />
-        <Text>{habit.name}</Text>
-        <View style={{ flexDirection: "row", margin: 10 }}>
-          <Text>Maximum Streak:</Text>
-          <Text>{maxStreak}</Text>
+        <Text
+          style={{
+            alignSelf: "center",
+            fontWeight: "bold",
+            fontSize: 28,
+            marginTop: 15,
+          }}
+        >
+          {habit.name}
+        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            margin: 10,
+            height: 80,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: habit.secondaryColor,
+              borderRadius: 10,
+              flex: 1,
+              justifyContent: "center",
+              marginRight: 10,
+            }}
+          >
+            <Text style={styles.titleStyle}>Maximum Streak</Text>
+            <Text style={styles.titleStyle}>{maxStreak}</Text>
+          </View>
+          <View
+            style={{
+              backgroundColor: habit.secondaryColor,
+              borderRadius: 10,
+              flex: 1,
+              justifyContent: "center",
+            }}
+          >
+            <Text style={styles.titleStyle}>Current Streak</Text>
+            <Text style={styles.titleStyle}>{currentStreak}</Text>
+          </View>
         </View>
-        <View style={{ flexDirection: "row", marginLeft: 10 }}>
-          <Text>Current Streak:</Text>
-          <Text>{currentStreak}</Text>
-        </View>
-        <View style={{ flexDirection: "row", marginLeft: 10 }}>
-          <Text>Total days completed:</Text>
-          <Text>{habit.completedDates.length}</Text>
-        </View>
+
+        <AnimatedCircularProgress
+          size={120}
+          width={15}
+          duration={1000}
+          fill={completionPercentage ? completionPercentage : 0}
+          tintColor={habit.secondaryColor}
+          backgroundColor="#d3d3d3"
+          rotation={0}
+          lineCap="round"
+          style={{ alignSelf: "center", marginTop: 20 }}
+        >
+          {(fill) => (
+            <Text style={{ fontSize: 24, fontWeight: "bold" }}>
+              {Math.round(completionPercentage ? completionPercentage : 0)}%
+            </Text>
+          )}
+        </AnimatedCircularProgress>
+        <Text style={{ alignSelf: "center", fontSize: 24 }}>
+          Completion Rate
+        </Text>
+        <Text style={{ alignSelf: "center", fontSize: 20, marginTop: 20 }}>
+          {" "}
+          Total Days Perfromed: {habit.completedDates.length}
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -123,5 +190,14 @@ export default Analytics;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+
+  titleStyle: {
+    fontSize: 18, // Adjust the font size to fit the width
+    textAlign: "center",
+  },
+  subtitleStyle: {
+    fontSize: 16, // Adjust the font size to fit the width
+    textAlign: "center",
   },
 });

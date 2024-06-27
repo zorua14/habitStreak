@@ -24,7 +24,7 @@ const AddHabit = () => {
     ["#8BFF5D", "#0DF349"],
     ["#EAAA6A", "#F37A02"],
     ["#EFC3CA", "#FF6F86"],
-    ["#7671FF", "#060270"],
+    ["#CDCCFC", "#7671FF"],
     ["#FFECA1", "#FACB11"],
   ];
   const dispatch = useDispatch();
@@ -32,9 +32,6 @@ const AddHabit = () => {
     if (habitName.trim()) {
       //   dispatch(addHabit({ id: Date.now().toString(), name: habitName }));
       setHabitName("");
-      console.log(colorArray[selectedIndex]);
-      console.log(habitName);
-      console.log(Date.now().toString());
 
       dispatch(
         addHabit({

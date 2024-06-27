@@ -5,13 +5,16 @@ import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { persistor, store } from "./src/redux/store";
 import { MenuProvider } from "react-native-popup-menu";
+import { Provider as PaperProvider } from "react-native-paper";
 
 export default function App() {
   return (
     <MenuProvider>
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
-          <AppNavigator />
+          <PaperProvider>
+            <AppNavigator />
+          </PaperProvider>
         </PersistGate>
       </Provider>
     </MenuProvider>

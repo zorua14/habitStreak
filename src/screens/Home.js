@@ -110,7 +110,11 @@ const Home = () => {
                 <SimpleLineIcons name="options" size={24} color="black" />
               </MenuTrigger>
               <MenuOptions>
-                <MenuOption onSelect={() => {}}>
+                <MenuOption
+                  onSelect={() => {
+                    navigation.navigate("Analytics", { id: item.id });
+                  }}
+                >
                   <Text style={{ padding: 10 }}>Analytics</Text>
                 </MenuOption>
                 <MenuOption
