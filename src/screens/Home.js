@@ -38,9 +38,6 @@ const Home = () => {
 
   const onDismissSnackBar = () => setVisible(false);
 
-  useEffect(() => {
-    console.log(habits);
-  }, [habits]);
   // MARK: - TOGGLE DATE
   const toggleDate = (habitId, dateString) => {
     const habit = habits.find((habit) => habit.id === habitId);
@@ -73,93 +70,98 @@ const Home = () => {
     }, {});
 
     return (
-      <View
+      <TouchableOpacity
         style={{
           backgroundColor: item.primaryColor,
           padding: 15,
           margin: 8,
           borderRadius: 15,
         }}
+        onPress={() => {
+          navigation.navigate("Analytics", { id: item.id });
+        }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Text
+        <View style={{ flex: 1 }}>
+          <View
             style={{
-              fontSize: 25,
-              color: "black",
-              marginLeft: 15,
-              marginVertical: 5,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            {item.name}
-          </Text>
+            <Text
+              style={{
+                fontSize: 25,
+                color: "black",
+                marginLeft: 15,
+                marginVertical: 5,
+              }}
+            >
+              {item.name}
+            </Text>
 
-          <Menu
-            style={{
-              marginRight: "6%",
-              width: 25,
-            }}
-          >
-            <MenuTrigger>
-              <SimpleLineIcons name="options" size={24} color="black" />
-            </MenuTrigger>
-            <MenuOptions>
-              <MenuOption onSelect={() => {}}>
-                <Text style={{ padding: 10 }}>Analytics</Text>
-              </MenuOption>
-              <MenuOption
-                onSelect={() => {
-                  onToggleSnackBar();
-                  dispatch(deleteHabit(item.id));
-                }}
-              >
-                <Text style={{ padding: 10 }}>Delete Habit</Text>
-              </MenuOption>
-            </MenuOptions>
-          </Menu>
+            <Menu
+              style={{
+                marginRight: "6%",
+                width: 25,
+              }}
+            >
+              <MenuTrigger>
+                <SimpleLineIcons name="options" size={24} color="black" />
+              </MenuTrigger>
+              <MenuOptions>
+                <MenuOption onSelect={() => {}}>
+                  <Text style={{ padding: 10 }}>Analytics</Text>
+                </MenuOption>
+                <MenuOption
+                  onSelect={() => {
+                    onToggleSnackBar();
+                    dispatch(deleteHabit(item.id));
+                  }}
+                >
+                  <Text style={{ padding: 10 }}>Delete Habit</Text>
+                </MenuOption>
+              </MenuOptions>
+            </Menu>
+          </View>
+          <ScrollView horizontal contentContainerStyle={styles.weekContainer}>
+            {weekDates.map((date) => (
+              <View key={date} style={styles.dayContainer}>
+                <Text>
+                  {new Date(date).toLocaleDateString("en-US", {
+                    weekday: "short",
+                  })}
+                </Text>
+                <Text>{new Date(date).getDate()}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success
+                    );
+                    toggleDate(item.id, date);
+                  }}
+                >
+                  <View
+                    style={[
+                      styles.dateCircle,
+
+                      markedDates[date] && {
+                        backgroundColor: item.secondaryColor,
+                      },
+                      {
+                        borderColor:
+                          date === new Date().toISOString().split("T")[0]
+                            ? "white"
+                            : "black",
+                      },
+                    ]}
+                  />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
         </View>
-        <ScrollView horizontal contentContainerStyle={styles.weekContainer}>
-          {weekDates.map((date) => (
-            <View key={date} style={styles.dayContainer}>
-              <Text>
-                {new Date(date).toLocaleDateString("en-US", {
-                  weekday: "short",
-                })}
-              </Text>
-              <Text>{new Date(date).getDate()}</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.notificationAsync(
-                    Haptics.NotificationFeedbackType.Success
-                  );
-                  toggleDate(item.id, date);
-                }}
-              >
-                <View
-                  style={[
-                    styles.dateCircle,
-
-                    markedDates[date] && {
-                      backgroundColor: item.secondaryColor,
-                    },
-                    {
-                      borderColor:
-                        date === new Date().toISOString().split("T")[0]
-                          ? "white"
-                          : "black",
-                    },
-                  ]}
-                />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
+      </TouchableOpacity>
     );
   };
 

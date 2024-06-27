@@ -35,4 +35,6 @@ const habitSlice = createSlice({
 
 export const { addHabit, deleteHabit, addDateToHabit, removeDateFromHabit } =
   habitSlice.actions;
+export const selectHabitById = (state, habitId) =>
+  state.habits.find((habit) => habit.id === habitId);
 export default habitSlice.reducer;
