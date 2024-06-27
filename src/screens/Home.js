@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Entypo } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
+import { Snackbar } from "react-native-paper";
 import {
   Menu,
   MenuOptions,
@@ -24,12 +25,19 @@ import {
   addDateToHabit,
   removeDateFromHabit,
 } from "../redux/habitSlice";
+import { StatusBar } from "expo-status-bar";
 
 const Home = () => {
   const navigation = useNavigation();
   const [showMonth, setShowMonth] = useState(false);
   const dispatch = useDispatch();
   const habits = useSelector((state) => state.habits);
+  const [visible, setVisible] = useState(false);
+
+  const onToggleSnackBar = () => setVisible(!visible);
+
+  const onDismissSnackBar = () => setVisible(false);
+
   useEffect(() => {
     console.log(habits);
   }, [habits]);
@@ -45,11 +53,12 @@ const Home = () => {
     }
   };
   // MARK: - GET WEEK DATES
+
   const getWeekDates = () => {
     const today = new Date();
     const weekDates = Array.from({ length: 5 }).map((_, i) => {
       const date = new Date(today);
-      date.setDate(today.getDate() + i);
+      date.setDate(today.getDate() - (4 - i));
       return date.toISOString().split("T")[0];
     });
 
@@ -105,6 +114,7 @@ const Home = () => {
               </MenuOption>
               <MenuOption
                 onSelect={() => {
+                  onToggleSnackBar();
                   dispatch(deleteHabit(item.id));
                 }}
               >
@@ -155,6 +165,7 @@ const Home = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
       <View style={styles.container}>
         <Text
           style={{
@@ -181,6 +192,9 @@ const Home = () => {
           <Entypo name="plus" size={24} color="white" />
         </TouchableOpacity>
       </View>
+      <Snackbar visible={visible} onDismiss={onDismissSnackBar} duration={1200}>
+        Habit has been deleted
+      </Snackbar>
     </SafeAreaView>
   );
 };
@@ -194,8 +208,8 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    bottom: 50,
-    right: 50,
+    bottom: 30,
+    right: 30,
     width: 50,
     height: 50,
     borderRadius: 25,

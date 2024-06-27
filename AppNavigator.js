@@ -4,6 +4,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Home from "./src/screens/Home";
 import AddHabit from "./src/screens/AddHabit";
+import Analytics from "./src/screens/Analytics";
 
 const Stack = createNativeStackNavigator();
 const AppNavigator = () => {
@@ -18,6 +19,11 @@ const AppNavigator = () => {
         <Stack.Screen
           name="AddHabit"
           component={AddHabit}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Analytics"
+          component={Analytics}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>
