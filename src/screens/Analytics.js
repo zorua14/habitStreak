@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Calendar } from "react-native-calendars";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,7 +12,7 @@ import { differenceInDays, parseISO } from "date-fns";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 import { useTheme } from "react-native-paper";
 import { StatusBar } from "expo-status-bar";
-
+import { Feather } from "@expo/vector-icons";
 const Analytics = ({ navigation, route }) => {
   const { colors, dark } = useTheme();
   const [themeChanged, setThemeChanged] = useState(false);
@@ -31,7 +31,7 @@ const Analytics = ({ navigation, route }) => {
     return markedDates;
   };
   useEffect(() => {
-    setThemeChanged((prev) => !prev); // Trigger re-render when theme changes
+    setThemeChanged((prev) => !prev);
   }, [colors]);
   const currentDate = new Date().toISOString().split("T")[0];
   const markedDates = transformDates(
@@ -74,7 +74,7 @@ const Analytics = ({ navigation, route }) => {
     const lastCompletedDate = sortedDates[sortedDates.length - 1];
     const daysSinceLastCompleted = differenceInDays(today, lastCompletedDate);
     const daysBetweenTodayAndStart =
-      differenceInDays(today, sortedDates[0]) + 1; // Include both start and end dates
+      differenceInDays(today, sortedDates[0]) + 1;
     const completionPercentage = Math.round(
       (sortedDates.length / daysBetweenTodayAndStart) * 100
     );
@@ -136,7 +136,7 @@ const Analytics = ({ navigation, route }) => {
             hideArrows={false}
             hideExtraDays={true}
             disableMonthChange={false}
-            enableSwipeMonths={true}
+            enableSwipeMonths={false}
             onPressArrowLeft={(subtractMonth) => subtractMonth()}
             onPressArrowRight={(addMonth) => addMonth()}
             disableArrowLeft={false}
@@ -144,17 +144,37 @@ const Analytics = ({ navigation, route }) => {
             disableAllTouchEventsForDisabledDays={true}
             markedDates={markedDates}
           />
-          <Text
+          <View
             style={{
-              alignSelf: "center",
-              fontWeight: "bold",
-              fontSize: 28,
-              marginTop: 15,
-              color: colors.title,
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
-            {habit.name}
-          </Text>
+            <Text
+              style={{
+                alignSelf: "center",
+                fontWeight: "bold",
+                fontSize: 28,
+                marginTop: 15,
+                color: colors.title,
+              }}
+            >
+              {habit.name}
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                navigation.navigate("AddHabit", { id: habit.id });
+              }}
+            >
+              <Feather
+                name="edit-2"
+                size={24}
+                color={colors.title}
+                style={{ marginTop: 15, marginLeft: 10 }}
+              />
+            </TouchableOpacity>
+          </View>
           <View
             style={{
               flexDirection: "row",
@@ -240,11 +260,12 @@ const styles = StyleSheet.create({
   },
 
   titleStyle: {
-    fontSize: 18, // Adjust the font size to fit the width
+    fontSize: 20,
     textAlign: "center",
+    fontWeight: "500",
   },
   subtitleStyle: {
-    fontSize: 16, // Adjust the font size to fit the width
+    fontSize: 16,
     textAlign: "center",
   },
 });

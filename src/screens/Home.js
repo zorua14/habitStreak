@@ -5,12 +5,13 @@ import {
   View,
   ScrollView,
   FlatList,
+  Vibration,
+  Animated,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Entypo } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import * as Haptics from "expo-haptics";
 import { Snackbar, useTheme } from "react-native-paper";
 import {
   Menu,
@@ -26,6 +27,7 @@ import {
   removeDateFromHabit,
 } from "../redux/habitSlice";
 import { StatusBar } from "expo-status-bar";
+import AnimatedTouchable from "../components/AnimatedTouchable";
 
 const Home = () => {
   const { colors, dark } = useTheme();
@@ -75,8 +77,9 @@ const Home = () => {
         style={{
           backgroundColor: item.primaryColor,
           padding: 15,
-          margin: 8,
+          marginVertical: 8,
           borderRadius: 15,
+          marginHorizontal: 12,
         }}
         onPress={() => {
           navigation.navigate("Analytics", { id: item.id });
@@ -138,11 +141,9 @@ const Home = () => {
                   })}
                 </Text>
                 <Text>{new Date(date).getDate()}</Text>
-                <TouchableOpacity
+                <AnimatedTouchable
                   onPress={() => {
-                    Haptics.notificationAsync(
-                      Haptics.NotificationFeedbackType.Success
-                    );
+                    Vibration.vibrate(100);
                     toggleDate(item.id, date);
                   }}
                 >
@@ -161,7 +162,7 @@ const Home = () => {
                       },
                     ]}
                   />
-                </TouchableOpacity>
+                </AnimatedTouchable>
               </View>
             ))}
           </ScrollView>
@@ -194,24 +195,50 @@ const Home = () => {
           >
             Your Streak!
           </Text>
-          <FlatList
+          {habits.length == 0 ? (
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={{
+                  fontWeight: "600",
+                  fontSize: 30,
+                  color: colors.title,
+                }}
+              >
+                No Habits Added Yet
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={habits}
+              renderItem={renderWeekView}
+              keyExtractor={(item) => item.id}
+            />
+          )}
+          {/* <FlatList
             data={habits}
             renderItem={renderWeekView}
             keyExtractor={(item) => item.id}
-          />
+          /> */}
           <TouchableOpacity
-            style={styles.fab}
+            style={[styles.fab, { backgroundColor: colors.title }]}
             onPress={() => {
-              navigation.navigate("AddHabit");
+              navigation.navigate("AddHabit", { id: null });
             }}
           >
-            <Entypo name="plus" size={24} color="white" />
+            <Entypo name="plus" size={24} color={colors.background} />
           </TouchableOpacity>
         </View>
         <Snackbar
           visible={visible}
           onDismiss={onDismissSnackBar}
           duration={1200}
+          style={{ backgroundColor: "white", marginBottom: 20 }}
         >
           Habit has been deleted
         </Snackbar>
@@ -234,7 +261,6 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     elevation: 5,
-    backgroundColor: "red",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -259,6 +285,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     marginTop: 5,
+    marginBottom: 5,
   },
 });
 const pickerSelectStyles = StyleSheet.create({

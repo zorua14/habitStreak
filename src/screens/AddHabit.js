@@ -11,11 +11,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSelector, useDispatch } from "react-redux";
-import { addHabit } from "../redux/habitSlice";
+import { addHabit, editHabit } from "../redux/habitSlice";
 import { useTheme } from "react-native-paper";
 import { StatusBar } from "expo-status-bar";
 
-const AddHabit = () => {
+const AddHabit = ({ route }) => {
+  const { id } = route.params;
   const navigation = useNavigation();
   const { colors, dark } = useTheme();
   const [habitName, setHabitName] = useState("");
@@ -34,15 +35,25 @@ const AddHabit = () => {
     if (habitName.trim()) {
       //   dispatch(addHabit({ id: Date.now().toString(), name: habitName }));
       setHabitName("");
-
-      dispatch(
-        addHabit({
-          id: Date.now().toString(),
-          name: habitName,
-          primaryColor: colorArray[selectedIndex][0],
-          secondaryColor: colorArray[selectedIndex][1],
-        })
-      );
+      if (id) {
+        dispatch(
+          editHabit({
+            id,
+            name: habitName,
+            primaryColor: colorArray[selectedIndex][0],
+            secondaryColor: colorArray[selectedIndex][1],
+          })
+        );
+      } else {
+        dispatch(
+          addHabit({
+            id: Date.now().toString(),
+            name: habitName,
+            primaryColor: colorArray[selectedIndex][0],
+            secondaryColor: colorArray[selectedIndex][1],
+          })
+        );
+      }
       navigation.goBack();
     } else {
       Alert.alert("Name is required", "Please enter a name");
@@ -63,13 +74,13 @@ const AddHabit = () => {
         >
           <View style={styles.innerContainer}>
             <Text style={[styles.headerText, { color: colors.title }]}>
-              Add Habit
+              {id ? "Edit Habit" : "Add Habit"}
             </Text>
             <TextInput
               style={styles.input}
               value={habitName}
               onChangeText={setHabitName}
-              placeholder="Enter habit"
+              placeholder={id ? "New Name" : "Enter habit"}
               placeholderTextColor="#888"
               color={colors.title}
             />

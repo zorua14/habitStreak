@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-
+//MARK: TODO - edit name
 const habitSlice = createSlice({
   name: "habits",
   initialState: [],
@@ -30,11 +30,29 @@ const habitSlice = createSlice({
         habit.completedDates = habit.completedDates.filter((d) => d !== date);
       }
     },
+    editHabit: (state, action) => {
+      const { id, name, primaryColor, secondaryColor } = action.payload;
+      const habitIndex = state.findIndex((habit) => habit.id === id);
+      if (habitIndex !== -1) {
+        state[habitIndex] = {
+          id,
+          name,
+          primaryColor,
+          secondaryColor,
+          completedDates: state[habitIndex].completedDates,
+        };
+      }
+    },
   },
 });
 
-export const { addHabit, deleteHabit, addDateToHabit, removeDateFromHabit } =
-  habitSlice.actions;
+export const {
+  addHabit,
+  deleteHabit,
+  addDateToHabit,
+  removeDateFromHabit,
+  editHabit,
+} = habitSlice.actions;
 export const selectHabitById = (state, habitId) =>
   state.habits.find((habit) => habit.id === habitId);
 export default habitSlice.reducer;
