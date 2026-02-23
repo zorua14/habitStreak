@@ -12,7 +12,7 @@ const AnimatedTouchable = ({ children, onPress }) => {
 
   const onPressIn = () => {
     Animated.spring(scaleValue, {
-      toValue: 1.3,
+      toValue: 1.2,
       useNativeDriver: true,
     }).start();
   };

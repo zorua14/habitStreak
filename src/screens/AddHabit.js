@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,6 +14,9 @@ import { useSelector, useDispatch } from "react-redux";
 import { addHabit, editHabit } from "../redux/habitSlice";
 import { useTheme } from "react-native-paper";
 import { StatusBar } from "expo-status-bar";
+import { Feather } from "@expo/vector-icons";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+
 
 const AddHabit = ({ route }) => {
   const { id } = route.params;
@@ -31,6 +34,18 @@ const AddHabit = ({ route }) => {
     ["#FFECA1", "#FACB11"],
   ];
   const dispatch = useDispatch();
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ marginLeft: 8 }}
+        >
+          <Feather name="arrow-left" size={24} color={colors.title} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
   const handleAddHabit = () => {
     if (habitName.trim()) {
       //   dispatch(addHabit({ id: Date.now().toString(), name: habitName }));
@@ -61,11 +76,7 @@ const AddHabit = ({ route }) => {
   };
   return (
     <>
-      <StatusBar
-        barStyle={dark ? "light-content" : "dark-content"}
-        backgroundColor={colors.background}
-      />
-      <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView style={styles.container} behavior="height">
         <LinearGradient
           style={styles.container}
           colors={[colors.background, color]}
@@ -109,7 +120,7 @@ const AddHabit = ({ route }) => {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-      </SafeAreaView>
+      </KeyboardAvoidingView>
     </>
   );
 };

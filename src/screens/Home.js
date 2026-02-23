@@ -1,4 +1,5 @@
 import {
+  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -6,170 +7,197 @@ import {
   ScrollView,
   FlatList,
   Vibration,
-  Animated,
 } from "react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Entypo } from "@expo/vector-icons";
+import { Entypo, SimpleLineIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { Snackbar, useTheme } from "react-native-paper";
 import {
-  Menu,
-  MenuOptions,
-  MenuOption,
-  MenuTrigger,
-} from "react-native-popup-menu";
-import { SimpleLineIcons } from "@expo/vector-icons";
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { useSelector, useDispatch } from "react-redux";
-import {
-  deleteHabit,
-  addDateToHabit,
-  removeDateFromHabit,
-} from "../redux/habitSlice";
+import { deleteHabit, addDateToHabit, removeDateFromHabit } from "../redux/habitSlice";
 import { StatusBar } from "expo-status-bar";
 import AnimatedTouchable from "../components/AnimatedTouchable";
 
 const Home = () => {
   const { colors, dark } = useTheme();
   const navigation = useNavigation();
-  const [showMonth, setShowMonth] = useState(false);
   const dispatch = useDispatch();
   const habits = useSelector((state) => state.habits);
-  const [visible, setVisible] = useState(false);
+  const [snackVisible, setSnackVisible] = useState(false);
+  const [selectedHabit, setSelectedHabit] = useState(null);
 
-  const onToggleSnackBar = () => setVisible(!visible);
+  const bottomSheetModalRef = useRef(null);
 
-  const onDismissSnackBar = () => setVisible(false);
+  // Store the pending navigation action so we can fire it after sheet closes
+  const pendingNavAction = useRef(null);
+  const pendingDeleteRef = useRef(null);
 
-  // MARK: - TOGGLE DATE
-  const toggleDate = (habitId, dateString) => {
-    const habit = habits.find((habit) => habit.id === habitId);
-    if (!habit) return;
+  const handlePresentModal = useCallback((habit) => {
+    setSelectedHabit(habit);
+    bottomSheetModalRef.current?.present();
+  }, []);
 
-    if (habit.completedDates.includes(dateString)) {
-      dispatch(removeDateFromHabit({ id: habitId, date: dateString }));
-    } else {
-      dispatch(addDateToHabit({ id: habitId, date: dateString }));
+  const handleClose = useCallback(() => {
+    bottomSheetModalRef.current?.dismiss();
+  }, []);
+
+  // Called by BottomSheetModal's onDismiss — fires AFTER the sheet animation completes
+  const handleSheetDismiss = useCallback(() => {
+    if (pendingNavAction.current) {
+      pendingNavAction.current();
+      pendingNavAction.current = null;
     }
-  };
-  // MARK: - GET WEEK DATES
+    if (pendingDeleteRef.current) {
+      const { id, name } = pendingDeleteRef.current;
+      pendingDeleteRef.current = null;
+      const habitName = name ?? "this habit";
+      Alert.alert(
+        "Delete habit?",
+        `Are you sure you want to delete "${habitName}"? This cannot be undone.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => {
+              dispatch(deleteHabit(id));
+              setSnackVisible(true);
+            },
+          },
+        ]
+      );
+    }
+  }, [dispatch]);
 
-  const getWeekDates = () => {
+  const navigateAfterDismiss = useCallback(
+    (screenName, params) => {
+      // Queue the navigation action, then dismiss the sheet
+      pendingNavAction.current = () => navigation.navigate(screenName, params);
+      bottomSheetModalRef.current?.dismiss();
+    },
+    [navigation]
+  );
+
+  const renderBackdrop = useCallback(
+    (props) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        pressBehavior="close"
+        opacity={0.4}
+      />
+    ),
+    []
+  );
+
+  const toggleDate = useCallback(
+    (habitId, dateString) => {
+      const habit = habits.find((h) => h.id === habitId);
+      if (!habit) return;
+      if (habit.completedDates.includes(dateString)) {
+        dispatch(removeDateFromHabit({ id: habitId, date: dateString }));
+      } else {
+        dispatch(addDateToHabit({ id: habitId, date: dateString }));
+      }
+    },
+    [habits, dispatch]
+  );
+
+  const getWeekDates = useCallback(() => {
     const today = new Date();
-    const weekDates = Array.from({ length: 5 }).map((_, i) => {
+    return Array.from({ length: 5 }).map((_, i) => {
       const date = new Date(today);
       date.setDate(today.getDate() - (4 - i));
       return date.toISOString().split("T")[0];
     });
+  }, []);
 
-    return weekDates;
-  };
-  // MARK: - WEEK VIEW
-  const renderWeekView = ({ item }) => {
-    const weekDates = getWeekDates();
-    const markedDates = item.completedDates.reduce((acc, date) => {
-      acc[date] = true;
-      return acc;
-    }, {});
+  const weekDates = getWeekDates();
+  const todayString = new Date().toISOString().split("T")[0];
 
-    return (
-      <TouchableOpacity
-        style={{
-          backgroundColor: item.primaryColor,
-          padding: 15,
-          marginVertical: 8,
-          borderRadius: 15,
-          marginHorizontal: 12,
-        }}
-        onPress={() => {
-          navigation.navigate("Analytics", { id: item.id });
-        }}
-      >
-        <View style={{ flex: 1 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Text
+  const renderWeekView = useCallback(
+    ({ item }) => {
+      const markedDates = item.completedDates.reduce((acc, date) => {
+        acc[date] = true;
+        return acc;
+      }, {});
+
+      return (
+        <TouchableOpacity
+          style={{
+            backgroundColor: item.primaryColor,
+            padding: 15,
+            marginVertical: 8,
+            borderRadius: 15,
+            marginHorizontal: 12,
+          }}
+          onPress={() => navigation.navigate("Analytics", { id: item.id })}
+        >
+          <View style={{ flex: 1 }}>
+            <View
               style={{
-                fontSize: 25,
-                color: "black",
-                marginLeft: 15,
-                marginVertical: 5,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              {item.name}
-            </Text>
+              <Text
+                style={{
+                  fontSize: 25,
+                  color: "black",
+                  marginLeft: 15,
+                  marginVertical: 5,
+                }}
+              >
+                {item.name}
+              </Text>
 
-            <Menu
-              style={{
-                marginRight: "6%",
-                width: 25,
-              }}
-            >
-              <MenuTrigger>
+              <TouchableOpacity
+                onPress={() => handlePresentModal(item)}
+                style={{ marginRight: "6%", padding: 4 }}
+              >
                 <SimpleLineIcons name="options" size={24} color="black" />
-              </MenuTrigger>
-              <MenuOptions>
-                <MenuOption
-                  onSelect={() => {
-                    navigation.navigate("Analytics", { id: item.id });
-                  }}
-                >
-                  <Text style={{ padding: 10 }}>Analytics</Text>
-                </MenuOption>
-                <MenuOption
-                  onSelect={() => {
-                    onToggleSnackBar();
-                    dispatch(deleteHabit(item.id));
-                  }}
-                >
-                  <Text style={{ padding: 10 }}>Delete Habit</Text>
-                </MenuOption>
-              </MenuOptions>
-            </Menu>
-          </View>
-          <ScrollView horizontal contentContainerStyle={styles.weekContainer}>
-            {weekDates.map((date) => (
-              <View key={date} style={styles.dayContainer}>
-                <Text>
-                  {new Date(date).toLocaleDateString("en-US", {
-                    weekday: "short",
-                  })}
-                </Text>
-                <Text>{new Date(date).getDate()}</Text>
-                <AnimatedTouchable
-                  onPress={() => {
-                    Vibration.vibrate(100);
-                    toggleDate(item.id, date);
-                  }}
-                >
-                  <View
-                    style={[
-                      styles.dateCircle,
+              </TouchableOpacity>
+            </View>
 
-                      markedDates[date] && {
-                        backgroundColor: item.secondaryColor,
-                      },
-                      {
-                        borderColor:
-                          date === new Date().toISOString().split("T")[0]
-                            ? "white"
-                            : "black",
-                      },
-                    ]}
-                  />
-                </AnimatedTouchable>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+            <ScrollView horizontal contentContainerStyle={styles.weekContainer}>
+              {weekDates.map((date) => (
+                <View key={date} style={styles.dayContainer}>
+                  <Text>
+                    {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
+                  </Text>
+                  <Text>{new Date(date).getDate()}</Text>
+                  <AnimatedTouchable
+                    onPress={() => {
+                      Vibration.vibrate(100);
+                      toggleDate(item.id, date);
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.dateCircle,
+                        markedDates[date] && { backgroundColor: item.secondaryColor },
+                        {
+                          borderColor: date === todayString ? "white" : "black",
+                        },
+                      ]}
+                    />
+                  </AnimatedTouchable>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [weekDates, todayString, handlePresentModal, toggleDate, navigation]
+  );
 
   return (
     <>
@@ -177,12 +205,8 @@ const Home = () => {
         barStyle={dark ? "light-content" : "dark-content"}
         backgroundColor={colors.background}
       />
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-      >
-        <View
-          style={[styles.container, { backgroundColor: colors.background }]}
-        >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
           <Text
             style={{
               fontSize: 25,
@@ -195,21 +219,10 @@ const Home = () => {
           >
             Your Streak!
           </Text>
-          {habits.length == 0 ? (
-            <View
-              style={{
-                flex: 1,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text
-                style={{
-                  fontWeight: "600",
-                  fontSize: 30,
-                  color: colors.title,
-                }}
-              >
+
+          {habits.length === 0 ? (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontWeight: "600", fontSize: 30, color: colors.title }}>
                 No Habits Added Yet
               </Text>
             </View>
@@ -220,29 +233,74 @@ const Home = () => {
               keyExtractor={(item) => item.id}
             />
           )}
-          {/* <FlatList
-            data={habits}
-            renderItem={renderWeekView}
-            keyExtractor={(item) => item.id}
-          /> */}
+
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: colors.title }]}
-            onPress={() => {
-              navigation.navigate("AddHabit", { id: null });
-            }}
+            onPress={() => navigation.navigate("AddHabit", { id: null })}
           >
             <Entypo name="plus" size={24} color={colors.background} />
           </TouchableOpacity>
         </View>
+
         <Snackbar
-          visible={visible}
-          onDismiss={onDismissSnackBar}
+          visible={snackVisible}
+          onDismiss={() => setSnackVisible(false)}
           duration={1200}
           style={{ backgroundColor: "white", marginBottom: 20 }}
         >
           Habit has been deleted
         </Snackbar>
       </SafeAreaView>
+
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        enableDynamicSizing
+        enablePanDownToClose
+        backdropComponent={renderBackdrop}
+        // ← Key fix: fire pending navigation AFTER sheet animation finishes
+        onDismiss={handleSheetDismiss}
+        handleIndicatorStyle={{ backgroundColor: "#aaa" }}
+        handleStyle={{
+          backgroundColor: colors.surface,
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+        }}
+      >
+        <BottomSheetView style={[styles.sheetContent, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sheetTitle, { color: colors.onSurface }]}>
+            {selectedHabit?.name}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.sheetItem}
+            onPress={() => {
+              // Queue nav, dismiss sheet — onDismiss fires navigation after animation
+              navigateAfterDismiss("Analytics", { id: selectedHabit?.id });
+            }}
+          >
+            <SimpleLineIcons name="graph" size={20} color={colors.onSurface} />
+            <Text style={[styles.sheetItemText, { color: colors.onSurface }]}>
+              Analytics
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.sheetItem}
+            onPress={() => {
+              pendingDeleteRef.current = {
+                id: selectedHabit?.id,
+                name: selectedHabit?.name,
+              };
+              handleClose();
+            }}
+          >
+            <SimpleLineIcons name="trash" size={20} color="red" />
+            <Text style={[styles.sheetItemText, { color: "red" }]}>
+              Delete Habit
+            </Text>
+          </TouchableOpacity>
+        </BottomSheetView>
+      </BottomSheetModal>
     </>
   );
 };
@@ -250,9 +308,7 @@ const Home = () => {
 export default Home;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   fab: {
     position: "absolute",
     bottom: 30,
@@ -264,15 +320,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  picker: {
-    height: 50,
-    width: "100%",
-    marginVertical: 10,
-  },
   weekContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
-
     width: "100%",
   },
   dayContainer: {
@@ -287,26 +337,23 @@ const styles = StyleSheet.create({
     marginTop: 5,
     marginBottom: 5,
   },
-});
-const pickerSelectStyles = StyleSheet.create({
-  inputIOS: {
-    fontSize: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "gray",
-    borderRadius: 4,
-    color: "black",
-    paddingRight: 30, // to ensure the text is never behind the icon
+  sheetContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 8,
   },
-  inputAndroid: {
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 16,
+  },
+  sheetItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    gap: 12,
+  },
+  sheetItemText: {
     fontSize: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 0.5,
-    borderColor: "purple",
-    borderRadius: 8,
-    color: "black",
-    paddingRight: 30, // to ensure the text is never behind the icon
   },
 });
