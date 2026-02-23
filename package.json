@@ -15,7 +15,6 @@
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/native-stack": "^6.9.26",
     "@reduxjs/toolkit": "^2.11.2",
-    "axios": "^1.7.2",
     "babel-preset-expo": "~54.0.10",
     "date-fns": "^3.6.0",
     "expo": "^54.0.33",
