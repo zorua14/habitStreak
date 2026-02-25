@@ -2,18 +2,16 @@
   "expo": {
     "name": "Habit Streak",
     "slug": "habit",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-
     "ios": {
       "userInterfaceStyle": "automatic",
       "supportsTablet": true,
       "bundleIdentifier": "com.delewhoop.habit",
-      "buildNumber": "2"
+      "buildNumber": "1"
     },
-
     "android": {
       "userInterfaceStyle": "automatic",
       "edgeToEdgeEnabled": true,
@@ -22,29 +20,32 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.delewhoop.habit",
-      "versionCode": 2
+      "versionCode": 1
     },
-
     "web": {
       "favicon": "./assets/favicon.png"
     },
-
     "extra": {
       "eas": {
         "projectId": "4f849658-b94d-47d2-985e-8cd1342119b2"
       }
     },
-
     "plugins": [
       "expo-font",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#ffffff", 
+          "backgroundColor": "#ffffff",
           "image": "./assets/splash-icon-light.png",
           "imageWidth": 200
         }
       ]
-    ]
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/4f849658-b94d-47d2-985e-8cd1342119b2"
+    }
   }
 }
