@@ -528,7 +528,7 @@ const Analytics = ({ navigation, route }) => {
             arrowColor: accent,
             todayTextColor: accent,
           }}
-          key={themeChanged}
+          key={`${themeChanged}-${accent}`}
           current={currentDate}
           maxDate={currentDate}
           hideExtraDays={true}
