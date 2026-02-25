@@ -8,9 +8,9 @@ import {
   FlatList,
   Vibration,
 } from "react-native";
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Entypo, SimpleLineIcons, Feather } from "@expo/vector-icons";
+import { Entypo, SimpleLineIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { Snackbar, useTheme } from "react-native-paper";
 import {
@@ -22,7 +22,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { deleteHabit, addDateToHabit, removeDateFromHabit } from "../redux/habitSlice";
 import { StatusBar } from "expo-status-bar";
 import AnimatedTouchable from "../components/AnimatedTouchable";
-import * as Updates from "expo-updates";
 
 const Home = () => {
   const { colors, dark } = useTheme();
@@ -31,40 +30,12 @@ const Home = () => {
   const habits = useSelector((state) => state.habits);
   const [snackVisible, setSnackVisible] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState(null);
-  const [isUpdating, setIsUpdating] = useState(false);
 
   const bottomSheetModalRef = useRef(null);
-  const updateSheetRef = useRef(null);
 
+  // Store the pending navigation action so we can fire it after sheet closes
   const pendingNavAction = useRef(null);
   const pendingDeleteRef = useRef(null);
-
-  // Check for OTA update on mount
-  useEffect(() => {
-    if (__DEV__) return;
-    async function checkUpdate() {
-      try {
-        const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) {
-          updateSheetRef.current?.present();
-        }
-      } catch (e) {
-        // silently ignore
-      }
-    }
-    checkUpdate();
-  }, []);
-
-  const handleUpdate = useCallback(async () => {
-    setIsUpdating(true);
-    try {
-      await Updates.fetchUpdateAsync();
-      await Updates.reloadAsync();
-    } catch (e) {
-      setIsUpdating(false);
-      alert(`Update failed: ${e.message}`);
-    }
-  }, []);
 
   const handlePresentModal = useCallback((habit) => {
     setSelectedHabit(habit);
@@ -75,6 +46,7 @@ const Home = () => {
     bottomSheetModalRef.current?.dismiss();
   }, []);
 
+  // Called by BottomSheetModal's onDismiss — fires AFTER the sheet animation completes
   const handleSheetDismiss = useCallback(() => {
     if (pendingNavAction.current) {
       pendingNavAction.current();
@@ -104,6 +76,7 @@ const Home = () => {
 
   const navigateAfterDismiss = useCallback(
     (screenName, params) => {
+      // Queue the navigation action, then dismiss the sheet
       pendingNavAction.current = () => navigation.navigate(screenName, params);
       bottomSheetModalRef.current?.dismiss();
     },
@@ -118,19 +91,6 @@ const Home = () => {
         disappearsOnIndex={-1}
         pressBehavior="close"
         opacity={0.4}
-      />
-    ),
-    []
-  );
-
-  const renderUpdateBackdrop = useCallback(
-    (props) => (
-      <BottomSheetBackdrop
-        {...props}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        pressBehavior="none"
-        opacity={0.5}
       />
     ),
     []
@@ -292,12 +252,12 @@ const Home = () => {
         </Snackbar>
       </SafeAreaView>
 
-      {/* Habit options sheet */}
       <BottomSheetModal
         ref={bottomSheetModalRef}
         enableDynamicSizing
         enablePanDownToClose
         backdropComponent={renderBackdrop}
+        // ← Key fix: fire pending navigation AFTER sheet animation finishes
         onDismiss={handleSheetDismiss}
         handleIndicatorStyle={{ backgroundColor: "#aaa" }}
         handleStyle={{
@@ -313,7 +273,10 @@ const Home = () => {
 
           <TouchableOpacity
             style={styles.sheetItem}
-            onPress={() => navigateAfterDismiss("Analytics", { id: selectedHabit?.id })}
+            onPress={() => {
+              // Queue nav, dismiss sheet — onDismiss fires navigation after animation
+              navigateAfterDismiss("Analytics", { id: selectedHabit?.id });
+            }}
           >
             <SimpleLineIcons name="graph" size={20} color={colors.onSurface} />
             <Text style={[styles.sheetItemText, { color: colors.onSurface }]}>
@@ -334,59 +297,6 @@ const Home = () => {
             <SimpleLineIcons name="trash" size={20} color="red" />
             <Text style={[styles.sheetItemText, { color: "red" }]}>
               Delete Habit
-            </Text>
-          </TouchableOpacity>
-        </BottomSheetView>
-      </BottomSheetModal>
-
-      {/* OTA Update sheet */}
-      <BottomSheetModal
-        ref={updateSheetRef}
-        enableDynamicSizing
-        enablePanDownToClose={false}
-        backdropComponent={renderUpdateBackdrop}
-        handleIndicatorStyle={{ backgroundColor: "#aaa" }}
-        handleStyle={{
-          backgroundColor: colors.surface,
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
-        }}
-      >
-        <BottomSheetView style={[styles.sheetContent, { backgroundColor: colors.surface }]}>
-          {/* Icon row */}
-          <View style={styles.updateIconWrap}>
-            <Feather name="download-cloud" size={32} color={colors.onSurface} />
-          </View>
-
-          <Text style={[styles.sheetTitle, { color: colors.onSurface }]}>
-            Update Available
-          </Text>
-
-          <Text style={[styles.updateSubtitle, { color: colors.onSurface }]}>
-            A new version is ready. Update now to get the latest fixes and improvements.
-          </Text>
-
-          {/* Update button — styled like a filled sheetItem */}
-          <TouchableOpacity
-            style={[styles.sheetItem, styles.updateBtn, { borderColor: colors.onSurface, opacity: isUpdating ? 0.6 : 1 }]}
-            onPress={handleUpdate}
-            disabled={isUpdating}
-          >
-            <Feather name="refresh-cw" size={20} color={colors.onSurface} />
-            <Text style={[styles.sheetItemText, { color: colors.onSurface }]}>
-              {isUpdating ? "Updating..." : "Update Now"}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Later */}
-          <TouchableOpacity
-            style={styles.sheetItem}
-            onPress={() => updateSheetRef.current?.dismiss()}
-            disabled={isUpdating}
-          >
-            <Feather name="x" size={20} color={colors.onSurface} style={{ opacity: 0.4 }} />
-            <Text style={[styles.sheetItemText, { color: colors.onSurface, opacity: 0.4 }]}>
-              Maybe Later
             </Text>
           </TouchableOpacity>
         </BottomSheetView>
@@ -445,21 +355,5 @@ const styles = StyleSheet.create({
   },
   sheetItemText: {
     fontSize: 16,
-  },
-  updateIconWrap: {
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  updateSubtitle: {
-    fontSize: 13,
-    opacity: 0.55,
-    marginBottom: 8,
-    lineHeight: 19,
-  },
-  updateBtn: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    marginBottom: 2,
   },
 });
