@@ -2,7 +2,7 @@
   "expo": {
     "name": "Habit Streak",
     "slug": "habit",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -10,7 +10,6 @@
       "userInterfaceStyle": "automatic",
       "supportsTablet": true,
       "bundleIdentifier": "com.delewhoop.habit",
-      "buildNumber": "1"
     },
     "android": {
       "userInterfaceStyle": "automatic",
@@ -20,7 +19,6 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.delewhoop.habit",
-      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
