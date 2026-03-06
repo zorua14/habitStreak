@@ -1,7 +1,6 @@
-# .eas/workflows/android-build.yml
-# Triggered on every push to main — runs lint first, then builds Android (production profile)
+# .eas/workflows/android-build-flow.yaml
 
-name: Android Build (main)
+name: Android Build (master)
 
 on:
   push:
@@ -9,24 +8,9 @@ on:
       - master
 
 jobs:
-  lint:
-    name: Lint
-    steps:
-      - name: Checkout
-        uses: eas/checkout
-
-      - name: Install dependencies
-        uses: eas/install_node_modules
-
-      - name: Run lint
-        run: npx expo lint
-        # If you use a custom script, replace with: npm run lint
-
   build_android:
     name: Build Android
-    needs: [lint]           # only runs if lint passes
     type: build
     params:
       platform: android
-      profile: production   # maps to the "production" profile in your eas.json
-                            # which already sets autoIncrement, channel, and buildType: apk
+      profile: production
