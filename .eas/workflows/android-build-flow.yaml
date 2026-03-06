@@ -6,7 +6,7 @@ name: Android Build (main)
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   lint:
