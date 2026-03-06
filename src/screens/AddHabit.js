@@ -16,6 +16,8 @@ import { useTheme } from "react-native-paper";
 import { StatusBar } from "expo-status-bar";
 import { Feather } from "@expo/vector-icons";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { useEffect, useRef } from "react";
+import { selectHabitById } from "../redux/habitSlice";
 
 
 const AddHabit = ({ route }) => {
@@ -25,6 +27,7 @@ const AddHabit = ({ route }) => {
   const [habitName, setHabitName] = useState("");
   const [color, setColor] = useState("#98F5F9");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef(null);
   const colorArray = [
     ["#98F5F9", "#2273FF"],
     ["#8BFF5D", "#0DF349"],
@@ -34,6 +37,20 @@ const AddHabit = ({ route }) => {
     ["#FFECA1", "#FACB11"],
   ];
   const dispatch = useDispatch();
+  const habit = useSelector((state) => selectHabitById(state, id));
+  
+  useEffect(() => {
+  if (id && habit) {
+    setHabitName(habit.name);
+  }
+  }, [id, habit]);
+
+useEffect(() => {
+  if (id) {
+    inputRef.current?.focus();
+  }
+}, [id]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
@@ -84,10 +101,8 @@ const AddHabit = ({ route }) => {
           end={[1, 1]}
         >
           <View style={styles.innerContainer}>
-            <Text style={[styles.headerText, { color: colors.title }]}>
-              {id ? "Edit Habit" : "Add Habit"}
-            </Text>
             <TextInput
+              ref={inputRef}
               style={styles.input}
               value={habitName}
               onChangeText={setHabitName}

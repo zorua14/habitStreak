@@ -423,7 +423,7 @@ const Analytics = ({ navigation, route }) => {
     });
   }, [navigation, colors]);
 
-  const accent = habit?.secondaryColor ?? "#32C2FF";
+  const accent = (dark ? habit?.primaryColor : habit?.secondaryColor) ?? "#32C2FF";
   const currentDate = new Date().toISOString().split("T")[0];
 
   const [markedDates, setMarkedDates] = useState({});
@@ -528,7 +528,7 @@ const Analytics = ({ navigation, route }) => {
             arrowColor: accent,
             todayTextColor: accent,
           }}
-          key={themeChanged}
+          key={`${themeChanged}-${accent}`}
           current={currentDate}
           maxDate={currentDate}
           hideExtraDays={true}
