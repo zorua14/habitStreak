@@ -12,5 +12,5 @@ Below is a demo of the app. To try the app, download the provided APK from the l
 
 https://github.com/zorua14/habitStreak/assets/94368303/60e701fc-6cf0-46fa-86c3-21d3a2955614
 
-[Download the APK here](https://drive.google.com/file/d/1esAqz1p9alqnw6RwoQfRqEpuyZYDGfH1/view?usp=sharing)
+[Download the APK here](https://drive.google.com/file/d/1w_nd5ph0ehjspqjq7dBU0nGd5vvOG1MO/view?usp=drivesdk)
 
