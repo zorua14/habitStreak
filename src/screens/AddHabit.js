@@ -6,28 +6,36 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useLayoutEffect, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useLayoutEffect, useState, useEffect, useRef } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSelector, useDispatch } from "react-redux";
-import { addHabit, editHabit } from "../redux/habitSlice";
+import { useSelector } from "react-redux";
 import { useTheme } from "react-native-paper";
-import { StatusBar } from "expo-status-bar";
 import { Feather } from "@expo/vector-icons";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { useEffect, useRef } from "react";
-import { selectHabitById } from "../redux/habitSlice";
 
+import { selectHabitById } from "../redux/habitSlice";
+import {
+  useCreateHabitMutation,
+  useUpdateHabitMutation,
+} from "../redux/api/habitsApi";
 
 const AddHabit = ({ route }) => {
-  const { id } = route.params;
+  const { id } = route.params || {};
   const navigation = useNavigation();
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
+
   const [habitName, setHabitName] = useState("");
   const [color, setColor] = useState("#98F5F9");
   const [selectedIndex, setSelectedIndex] = useState(0);
+
   const inputRef = useRef(null);
+
+  const habit = useSelector((state) => selectHabitById(state, id));
+
+  const [createHabit] = useCreateHabitMutation();
+  const [updateHabit] = useUpdateHabitMutation();
+
   const colorArray = [
     ["#98F5F9", "#2273FF"],
     ["#8BFF5D", "#0DF349"],
@@ -36,20 +44,29 @@ const AddHabit = ({ route }) => {
     ["#CDCCFC", "#7671FF"],
     ["#FFECA1", "#FACB11"],
   ];
-  const dispatch = useDispatch();
-  const habit = useSelector((state) => selectHabitById(state, id));
-  
+
   useEffect(() => {
-  if (id && habit) {
-    setHabitName(habit.name);
-  }
+    if (id && habit) {
+      setHabitName(habit.name);
+
+      const index = colorArray.findIndex(
+        (c) =>
+          c[0] === habit.primaryColor &&
+          c[1] === habit.secondaryColor
+      );
+
+      if (index !== -1) {
+        setSelectedIndex(index);
+        setColor(colorArray[index][0]);
+      }
+    }
   }, [id, habit]);
 
-useEffect(() => {
-  if (id) {
-    inputRef.current?.focus();
-  }
-}, [id]);
+  useEffect(() => {
+    if (id) {
+      inputRef.current?.focus();
+    }
+  }, [id]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -63,80 +80,88 @@ useEffect(() => {
       ),
     });
   }, [navigation, colors]);
-  const handleAddHabit = () => {
-    if (habitName.trim()) {
-      //   dispatch(addHabit({ id: Date.now().toString(), name: habitName }));
-      setHabitName("");
-      if (id) {
-        dispatch(
-          editHabit({
-            id,
-            name: habitName,
-            primaryColor: colorArray[selectedIndex][0],
-            secondaryColor: colorArray[selectedIndex][1],
-          })
-        );
-      } else {
-        dispatch(
-          addHabit({
-            id: Date.now().toString(),
-            name: habitName,
-            primaryColor: colorArray[selectedIndex][0],
-            secondaryColor: colorArray[selectedIndex][1],
-          })
-        );
-      }
-      navigation.goBack();
-    } else {
+
+  const handleAddHabit = async () => {
+    if (!habitName.trim()) {
       Alert.alert("Name is required", "Please enter a name");
+      return;
+    }
+
+    try {
+      if (id) {
+        await updateHabit({
+          id,
+          name: habitName,
+          primaryColor: colorArray[selectedIndex][0],
+          secondaryColor: colorArray[selectedIndex][1],
+        }).unwrap();
+      } else {
+        await createHabit({
+          name: habitName,
+          primaryColor: colorArray[selectedIndex][0],
+          secondaryColor: colorArray[selectedIndex][1],
+        }).unwrap();
+      }
+
+      setHabitName("");
+      navigation.goBack();
+    } catch (error) {
+      console.log("Habit error:", error);
+      Alert.alert("Error", "Something went wrong");
     }
   };
+
   return (
-    <>
-      <KeyboardAvoidingView style={styles.container} behavior="height">
-        <LinearGradient
-          style={styles.container}
-          colors={[colors.background, color]}
-          start={[0.5, 0.5]}
-          end={[1, 1]}
-        >
-          <View style={styles.innerContainer}>
-            <TextInput
-              ref={inputRef}
-              style={styles.input}
-              value={habitName}
-              onChangeText={setHabitName}
-              placeholder={id ? "New Name" : "Enter habit"}
-              placeholderTextColor="#888"
-              color={colors.title}
-            />
-            <View style={styles.colorContainer}>
-              {colorArray.map((color, index) => (
-                <TouchableOpacity
-                  key={color[0]}
-                  style={[
-                    styles.colorView,
-                    {
-                      backgroundColor: color[0],
-                      borderWidth: index === selectedIndex ? 3 : 1,
-                      borderColor:
-                        index === selectedIndex ? colors.title : "transparent",
-                    },
-                  ]}
-                  onPress={() => {
-                    setColor(color[0]);
-                    setSelectedIndex(index);
-                  }}
-                ></TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity style={styles.addButton} onPress={handleAddHabit}>
-              <Text style={styles.addButtonText}>Done</Text>
-            </TouchableOpacity>
+    <KeyboardAvoidingView style={styles.container} behavior="height">
+      <LinearGradient
+        style={styles.container}
+        colors={[colors.background, color]}
+        start={[0.5, 0.5]}
+        end={[1, 1]}
+      >
+        <View style={styles.innerContainer}>
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            value={habitName}
+            onChangeText={setHabitName}
+            placeholder={id ? "New Name" : "Enter habit"}
+            placeholderTextColor="#888"
+            color={colors.title}
+          />
+
+          <View style={styles.colorContainer}>
+            {colorArray.map((colorItem, index) => (
+              <TouchableOpacity
+                key={colorItem[0]}
+                style={[
+                  styles.colorView,
+                  {
+                    backgroundColor: colorItem[0],
+                    borderWidth: index === selectedIndex ? 3 : 1,
+                    borderColor:
+                      index === selectedIndex
+                        ? colors.title
+                        : "transparent",
+                  },
+                ]}
+                onPress={() => {
+                  setColor(colorItem[0]);
+                  setSelectedIndex(index);
+                }}
+              />
+            ))}
           </View>
-        </LinearGradient>
-      </KeyboardAvoidingView>
-    </>
+
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddHabit}
+          >
+            <Text style={styles.addButtonText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -151,11 +176,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-  },
-  headerText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
   },
   input: {
     height: 40,
