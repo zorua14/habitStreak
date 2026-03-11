@@ -10,32 +10,49 @@ import {
 } from "react-native";
 import React, { useState, useRef, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Entypo, SimpleLineIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { Entypo, MaterialCommunityIcons, SimpleLineIcons } from "@expo/vector-icons";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Snackbar, useTheme } from "react-native-paper";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
-import { useSelector, useDispatch } from "react-redux";
-import { deleteHabit, addDateToHabit, removeDateFromHabit } from "../redux/habitSlice";
 import { StatusBar } from "expo-status-bar";
 import AnimatedTouchable from "../components/AnimatedTouchable";
+
+import {
+  useFetchHabitsQuery,
+  useDeleteHabitMutation,
+  useMarkHabitCompleteMutation,
+  useUnmarkHabitCompleteMutation,
+} from "../redux/api/habitsApi";
+import { signOut } from "../services/signout";
 
 const Home = () => {
   const { colors, dark } = useTheme();
   const navigation = useNavigation();
-  const dispatch = useDispatch();
-  const habits = useSelector((state) => state.habits);
+
+  const { data: habits = [], refetch } = useFetchHabitsQuery();
+  const [deleteHabit] = useDeleteHabitMutation();
+  const [markHabitComplete] = useMarkHabitCompleteMutation();
+  const [unmarkHabitComplete] = useUnmarkHabitCompleteMutation();
+
   const [snackVisible, setSnackVisible] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState(null);
 
   const bottomSheetModalRef = useRef(null);
-
-  // Store the pending navigation action so we can fire it after sheet closes
   const pendingNavAction = useRef(null);
   const pendingDeleteRef = useRef(null);
+
+  // Re-fetch every time this screen comes into focus (e.g. after login,
+  // or returning from AddHabit/Analytics). This ensures the cache is never
+  // stale from a previous user session.
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const handlePresentModal = useCallback((habit) => {
     setSelectedHabit(habit);
@@ -46,37 +63,40 @@ const Home = () => {
     bottomSheetModalRef.current?.dismiss();
   }, []);
 
-  // Called by BottomSheetModal's onDismiss — fires AFTER the sheet animation completes
   const handleSheetDismiss = useCallback(() => {
     if (pendingNavAction.current) {
       pendingNavAction.current();
       pendingNavAction.current = null;
     }
+
     if (pendingDeleteRef.current) {
       const { id, name } = pendingDeleteRef.current;
       pendingDeleteRef.current = null;
-      const habitName = name ?? "this habit";
+
       Alert.alert(
         "Delete habit?",
-        `Are you sure you want to delete "${habitName}"? This cannot be undone.`,
+        `Are you sure you want to delete "${name ?? "this habit"}"?`,
         [
           { text: "Cancel", style: "cancel" },
           {
             text: "Delete",
             style: "destructive",
-            onPress: () => {
-              dispatch(deleteHabit(id));
-              setSnackVisible(true);
+            onPress: async () => {
+              try {
+                await deleteHabit(id).unwrap();
+                setSnackVisible(true);
+              } catch {
+                Alert.alert("Error deleting habit");
+              }
             },
           },
         ]
       );
     }
-  }, [dispatch]);
+  }, [deleteHabit]);
 
   const navigateAfterDismiss = useCallback(
     (screenName, params) => {
-      // Queue the navigation action, then dismiss the sheet
       pendingNavAction.current = () => navigation.navigate(screenName, params);
       bottomSheetModalRef.current?.dismiss();
     },
@@ -97,16 +117,23 @@ const Home = () => {
   );
 
   const toggleDate = useCallback(
-    (habitId, dateString) => {
+    async (habitId, dateString) => {
       const habit = habits.find((h) => h.id === habitId);
       if (!habit) return;
-      if (habit.completedDates.includes(dateString)) {
-        dispatch(removeDateFromHabit({ id: habitId, date: dateString }));
-      } else {
-        dispatch(addDateToHabit({ id: habitId, date: dateString }));
+
+      const completed = habit.completed_dates ?? [];
+
+      try {
+        if (completed.includes(dateString)) {
+          await unmarkHabitComplete({ habitId, day: dateString }).unwrap();
+        } else {
+          await markHabitComplete({ habitId, day: dateString }).unwrap();
+        }
+      } catch (e) {
+        console.log("toggle error", e);
       }
     },
-    [habits, dispatch]
+    [habits, markHabitComplete, unmarkHabitComplete]
   );
 
   const getWeekDates = useCallback(() => {
@@ -123,15 +150,17 @@ const Home = () => {
 
   const renderWeekView = useCallback(
     ({ item }) => {
-      const markedDates = item.completedDates.reduce((acc, date) => {
-        acc[date] = true;
+      const completed = item.completed_dates ?? [];
+
+      const markedDates = completed.reduce((acc, d) => {
+        acc[d] = true;
         return acc;
       }, {});
 
       return (
         <TouchableOpacity
           style={{
-            backgroundColor: item.primaryColor,
+            backgroundColor: item.primary_color,
             padding: 15,
             marginVertical: 8,
             borderRadius: 15,
@@ -170,9 +199,13 @@ const Home = () => {
               {weekDates.map((date) => (
                 <View key={date} style={styles.dayContainer}>
                   <Text>
-                    {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
+                    {new Date(date).toLocaleDateString("en-US", {
+                      weekday: "short",
+                    })}
                   </Text>
+
                   <Text>{new Date(date).getDate()}</Text>
+
                   <AnimatedTouchable
                     onPress={() => {
                       Vibration.vibrate(100);
@@ -182,9 +215,12 @@ const Home = () => {
                     <View
                       style={[
                         styles.dateCircle,
-                        markedDates[date] && { backgroundColor: item.secondaryColor },
+                        markedDates[date] && {
+                          backgroundColor: item.secondary_color,
+                        },
                         {
-                          borderColor: date === todayString ? "white" : "black",
+                          borderColor:
+                            date === todayString ? "white" : "black",
                         },
                       ]}
                     />
@@ -196,33 +232,44 @@ const Home = () => {
         </TouchableOpacity>
       );
     },
-    [weekDates, todayString, handlePresentModal, toggleDate, navigation]
+    [weekDates, todayString, toggleDate, handlePresentModal, navigation]
   );
 
   return (
     <>
-      <StatusBar
-        barStyle={dark ? "light-content" : "dark-content"}
-        backgroundColor={colors.background}
-      />
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <Text
-            style={{
-              fontSize: 25,
-              fontWeight: "600",
-              marginLeft: 16,
-              marginVertical: 5,
-              textAlign: "center",
-              color: colors.title,
-            }}
-          >
-            Your Streak!
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 5 }}>
+            <Text
+              style={{
+                flex: 1,
+                fontSize: 25,
+                fontWeight: "600",
+                marginLeft: 16,
+                textAlign: "center",
+                color: colors.title,
+              }}
+            >
+              Your Streak!
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => signOut()}
+              style={{ marginRight: 16 }}
+            >
+              <MaterialCommunityIcons name="logout" size={22} color={colors.title} />
+            </TouchableOpacity>
+          </View>
 
           {habits.length === 0 ? (
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontWeight: "600", fontSize: 30, color: colors.title }}>
+            <View
+              style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+            >
+              <Text
+                style={{ fontWeight: "600", fontSize: 30, color: colors.title }}
+              >
                 No Habits Added Yet
               </Text>
             </View>
@@ -257,7 +304,6 @@ const Home = () => {
         enableDynamicSizing
         enablePanDownToClose
         backdropComponent={renderBackdrop}
-        // ← Key fix: fire pending navigation AFTER sheet animation finishes
         onDismiss={handleSheetDismiss}
         handleIndicatorStyle={{ backgroundColor: "#aaa" }}
         handleStyle={{
@@ -266,17 +312,18 @@ const Home = () => {
           borderTopRightRadius: 16,
         }}
       >
-        <BottomSheetView style={[styles.sheetContent, { backgroundColor: colors.surface }]}>
+        <BottomSheetView
+          style={[styles.sheetContent, { backgroundColor: colors.surface }]}
+        >
           <Text style={[styles.sheetTitle, { color: colors.onSurface }]}>
             {selectedHabit?.name}
           </Text>
 
           <TouchableOpacity
             style={styles.sheetItem}
-            onPress={() => {
-              // Queue nav, dismiss sheet — onDismiss fires navigation after animation
-              navigateAfterDismiss("Analytics", { id: selectedHabit?.id });
-            }}
+            onPress={() =>
+              navigateAfterDismiss("Analytics", { id: selectedHabit?.id })
+            }
           >
             <SimpleLineIcons name="graph" size={20} color={colors.onSurface} />
             <Text style={[styles.sheetItemText, { color: colors.onSurface }]}>
